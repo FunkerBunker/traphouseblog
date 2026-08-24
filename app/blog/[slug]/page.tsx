@@ -31,17 +31,22 @@ export default async function BlogPost({ params }: Props) {
   const { data, content } = matter(fileContents);
 
   return (
-    <article className="max-w-3xl mx-auto px-4 py-12 prose dark:prose-invert">
-      <Link href="/blog" className="text-sm text-blue-500 hover:underline mb-8 inline-block">
-        ← Zurück zur Übersicht
-      </Link>
-      <header className="mb-8">
-        <h1 className="text-4xl font-extrabold mb-2">{data.title}</h1>
-        {data.date && <p className="text-gray-500 text-sm">{data.date}</p>}
-      </header>
-      <div className="mt-6 space-y-4">
-        <MDXRemote source={content} />
-      </div>
-    </article>
+    <main className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+      <article className="max-w-3xl mx-auto">
+        <Link 
+          href="/blog" 
+          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline mb-8 inline-block"
+        >
+          ← Zurück zur Übersicht
+        </Link>
+        <header className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-800">
+          <h1 className="text-4xl font-extrabold tracking-tight mb-2">{data.title}</h1>
+          {data.date && <p className="text-sm text-gray-500 dark:text-gray-400">{data.date}</p>}
+        </header>
+        <div className="prose dark:prose-invert max-w-none">
+          <MDXRemote source={content} />
+        </div>
+      </article>
+    </main>
   );
 }
