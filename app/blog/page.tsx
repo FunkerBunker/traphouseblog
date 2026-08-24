@@ -7,15 +7,13 @@ interface Post {
   slug: string;
   title: string;
   date: string;
+  category: string;
   description: string;
 }
 
-export const metadata = {
-  title: 'Blog | Traphouse',
-  description: 'Alle Artikel und Gedanken auf einen Blick.',
-};
+const CATEGORIES = ["Alle", "Anbau", "Wirkung & Cultivation", "Equipment", "Sorten & Strains"];
 
-export default function BlogIndex() {
+export default async function BlogIndex() {
   const postsDirectory = path.join(process.cwd(), 'content/posts');
   let posts: Post[] = [];
 
@@ -31,46 +29,72 @@ export default function BlogIndex() {
         slug,
         title: data.title || slug,
         date: data.date || '',
+        category: data.category || 'Allgemein',
         description: data.description || '',
       };
     });
   }
 
   return (
-    <main className="min-h-screen py-20 px-4 sm:px-6 lg:px-8 bg-neutral-950 text-neutral-100">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-16">
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white mb-4">
-            Blog <span className="text-indigo-500">.</span>
-          </h1>
-          <p className="text-lg text-neutral-400 max-w-xl">
-            Gedanken, Guides und Updates – direkt aus dem Traphouse.
-          </p>
-        </header>
+    <main className="min-h-screen py-12 px-4 max-w-6xl mx-auto">
+      {/* Hero Header */}
+      <section className="mb-12">
+        <span className="text-xs font-bold uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+          Knowledge Base & Guides
+        </span>
+        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight mt-4 text-emerald-950 dark:text-white">
+          Cannabis <span className="text-emerald-500">Clustered.</span>
+        </h1>
+        <p className="mt-3 text-lg text-emerald-800/80 dark:text-neutral-400 max-w-2xl">
+          Echtes Wissen rund um Anbau, Terpene, Legalisierung & Equipment – übersichtlich gegliedert.
+        </p>
+      </section>
 
-        <div className="grid gap-6">
-          {posts.map((post) => (
-            <Link key={post.slug} href={`/blog/${post.slug}`} className="group block">
-              <article className="p-6 rounded-2xl border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-indigo-500/50 transition-all duration-300">
-                <div className="flex justify-between items-baseline mb-2">
-                  <h2 className="text-2xl font-bold text-white group-hover:text-indigo-400 transition-colors">
-                    {post.title}
-                  </h2>
-                  {post.date && (
-                    <span className="text-xs text-neutral-500 font-mono ml-4 shrink-0">
-                      {post.date}
-                    </span>
-                  )}
-                </div>
-                {post.description && (
-                  <p className="text-neutral-400 text-sm leading-relaxed line-clamp-2">
-                    {post.description}
-                  </p>
-                )}
-              </article>
-            </Link>
-          ))}
-        </div>
+      {/* Cluster Grid / Kategorien */}
+      <div className="space-y-16">
+        {CATEGORIES.filter(c => c !== "Alle").map((category) => {
+          const categoryPosts = posts.filter(p => p.category.toLowerCase() === category.toLowerCase());
+          if (categoryPosts.length === 0) return null;
+
+          return (
+            <section key={category} className="space-y-6">
+              <div className="flex items-center gap-3 border-b border-emerald-500/20 pb-3">
+                <span className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
+                <h2 className="text-2xl font-bold uppercase tracking-wide text-emerald-900 dark:text-emerald-400">
+                  {category}
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categoryPosts.map((post) => (
+                  <Link key={post.slug} href={`/blog/${post.slug}`} className="group block h-full">
+                    <article className="h-full p-6 rounded-2xl bg-white dark:bg-neutral-900/60 border border-emerald-900/10 dark:border-neutral-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-center text-xs font-mono text-emerald-600 dark:text-emerald-400 mb-3">
+                          <span className="bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            {post.category}
+                          </span>
+                          <span>{post.date}</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-emerald-950 dark:text-white group-hover:text-emerald-500 transition-colors">
+                          {post.title}
+                        </h3>
+                        {post.description && (
+                          <p className="mt-3 text-sm text-emerald-800/70 dark:text-neutral-400 line-clamp-3 leading-relaxed">
+                            {post.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="mt-6 pt-4 border-t border-emerald-500/10 flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-transform">
+                        Artikel lesen →
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </main>
   );
