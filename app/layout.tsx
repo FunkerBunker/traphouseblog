@@ -2,31 +2,31 @@ import React from 'react';
 import './globals.css';
 import Link from 'next/link';
 import ThemeToggle from './components/ThemeToggle';
-export const metadata = {
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
   title: 'TRAPHOUSE | Cannabis Guides & Culture',
   description: 'Tipps, Anbau-Guides, Strains & Equipment rund um Cannabis.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className="dark" suppressHydrationWarning>
-      <body className="bg-emerald-50/50 text-emerald-950 dark:bg-neutral-950 dark:text-neutral-100 min-h-screen selection:bg-emerald-500 selection:text-black">
-        <header className="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-neutral-950/80 border-b border-emerald-900/10 dark:border-emerald-500/20 transition-colors">
-          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 font-black text-xl tracking-wider uppercase">
-              <span className="text-emerald-500 text-2xl">🌿</span>
-              <span>TRAPHOUSE<span className="text-emerald-500">.</span></span>
-            </Link>
-            
-            <nav className="flex items-center gap-6">
-              <Link href="/blog" className="text-sm font-medium hover:text-emerald-500 transition-colors">
-                Alle Beiträge
-              </Link>
-              <ThemeToggle />
-            </nav>
-          </div>
-        </header>
-
+    <html lang="de" suppressHydrationWarning>
+      <body className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-300 transition-colors">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            (function () {
+              try {
+                const saved = localStorage.getItem('theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const shouldDark = saved === 'dark' || (!saved && prefersDark);
+                if (shouldDark) document.documentElement.classList.add('dark');
+              } catch (e) {}
+            })();
+          `,
+        }}
+        />
         {children}
       </body>
     </html>

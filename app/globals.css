@@ -1,8 +1,5 @@
+/* app/globals.css */
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
-
-/* Dark Mode per .dark-Klasse statt System-Einstellung */
-@custom-variant dark (&:where(.dark, .dark *));
 
 body {
   -webkit-font-smoothing: antialiased;
