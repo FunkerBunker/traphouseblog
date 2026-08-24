@@ -1,3 +1,5 @@
+// app/layout.tsx
+import { Analytics } from "@vercel/analytics/next"
 import React from 'react';
 import './globals.css';
 import Link from 'next/link';
@@ -9,6 +11,7 @@ export const metadata: Metadata = {
   description: 'Tipps, Anbau-Guides, Strains & Equipment rund um Cannabis.',
 };
 
+// Script, das das Theme vorsichtig vor dem Rendern setzt (im <head>!)
 const themeScript = `
 (function () {
   try {
@@ -23,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de" suppressHydrationWarning>
       <head>
+        {/* 🟢 WICHTIG: Script im <head> statt im <body> */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-300 transition-colors">
