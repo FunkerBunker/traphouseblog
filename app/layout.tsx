@@ -1,8 +1,7 @@
 import React from 'react';
 import './globals.css';
 import Link from 'next/link';
-import ThemeToggle from '@/components/ThemeToggle'; // passe Pfad an falls components direkt im Root liegt
-
+import ThemeToggle from './components/ThemeToggle';
 export const metadata = {
   title: 'TRAPHOUSE | Cannabis Guides & Culture',
   description: 'Tipps, Anbau-Guides, Strains & Equipment rund um Cannabis.',
