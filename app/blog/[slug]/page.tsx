@@ -10,76 +10,58 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-// 1. Automatische SEO-Metadaten pro Artikel
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const filePath = path.join(process.cwd(), 'content/posts', `${slug}.mdx`);
-
   if (!fs.existsSync(filePath)) return {};
-
-  const fileContents = fs.readFileSync(filePath, 'utf8');
-  const { data } = matter(fileContents);
-
+  const { data } = matter(fs.readFileSync(filePath, 'utf8'));
   return {
-    title: `${data.title} | Traphouse Blog`,
-    description: data.description || 'Ein Beitrag auf Traphouse Blog',
-    openGraph: {
-      title: data.title,
-      description: data.description || 'Ein Beitrag auf Traphouse Blog',
-      type: 'article',
-    },
+    title: `${data.title} | Traphouse`,
+    description: data.description || 'Ein Beitrag auf Traphouse',
+    openGraph: { title: data.title, description: data.description || '', type: 'article' },
   };
 }
 
 export async function generateStaticParams() {
-  const postsDirectory = path.join(process.cwd(), 'content/posts');
-  if (!fs.existsSync(postsDirectory)) return [];
-
-  const filenames = fs.readdirSync(postsDirectory);
-  return filenames.map((filename) => ({
-    slug: filename.replace(/\.mdx?$/, ''),
-  }));
+  const dir = path.join(process.cwd(), 'content/posts');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).map((f) => ({ slug: f.replace(/\.mdx?$/, '') }));
 }
 
-// 2. Styled Artikel-Ansicht
 export default async function BlogPost({ params }: Props) {
   const { slug } = await params;
   const filePath = path.join(process.cwd(), 'content/posts', `${slug}.mdx`);
+  if (!fs.existsSync(filePath)) notFound();
 
-  if (!fs.existsSync(filePath)) {
-    notFound();
-  }
-
-  const fileContents = fs.readFileSync(filePath, 'utf8');
-  const { data, content } = matter(fileContents);
+  const { data, content } = matter(fs.readFileSync(filePath, 'utf8'));
 
   return (
-    <main className="min-h-screen py-16 px-4 sm:px-6 lg:px-8 bg-neutral-950 text-neutral-100 selection:bg-indigo-500 selection:text-white">
-      <article className="max-w-3xl mx-auto">
-        <Link 
-          href="/blog" 
-          className="inline-flex items-center gap-2 text-sm font-medium text-neutral-400 hover:text-indigo-400 transition-colors mb-10 group"
-        >
-          <span className="transition-transform group-hover:-translate-x-1">←</span> Zurück zur Übersicht
+    <main className="px-6 py-16 sm:py-24">
+      <article className="max-w-2xl mx-auto">
+        <Link href="/blog" className="group inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+          <span className="transition-transform group-hover:-translate-x-1">←</span> Alle Beiträge
         </Link>
-        
-        <header className="mb-12 border-b border-neutral-800 pb-8">
-          {data.date && (
-            <time className="text-xs font-semibold tracking-wider text-indigo-400 uppercase">
-              {data.date}
-            </time>
-          )}
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mt-2 text-white leading-tight">
+
+        <header className="mt-10 pb-10 border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.2em]">
+            {data.category && <span className="text-emerald-600 dark:text-emerald-400">{data.category}</span>}
+            {data.date && <time className="text-neutral-400 dark:text-neutral-500">{data.date}</time>}
+          </div>
+          <h1 className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] text-neutral-900 dark:text-white">
             {data.title}
           </h1>
           {data.description && (
-            <p className="mt-4 text-lg text-neutral-400 leading-relaxed">
-              {data.description}
-            </p>
+            <p className="mt-4 text-lg leading-relaxed text-neutral-500 dark:text-neutral-400">{data.description}</p>
           )}
         </header>
 
-        <div className="prose prose-invert prose-indigo max-w-none prose-p:leading-relaxed prose-pre:border prose-pre:border-neutral-800">
+        <div className="prose prose-neutral dark:prose-invert max-w-none mt-10
+          prose-headings:tracking-tight
+          prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-a:no-underline hover:prose-a:underline
+          prose-strong:text-neutral-900 dark:prose-strong:text-white
+          prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:before:content-none prose-code:after:content-none
+          prose-pre:bg-neutral-100 dark:prose-pre:bg-neutral-900 prose-pre:border prose-pre:border-neutral-200 dark:prose-pre:border-neutral-800
+          prose-hr:border-neutral-200 dark:prose-hr:border-neutral-800">
           <MDXRemote source={content} />
         </div>
       </article>

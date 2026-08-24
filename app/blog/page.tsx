@@ -1,97 +1,69 @@
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
 import Link from 'next/link';
+import { getAllPosts } from '@/lib/posts';
 
-interface Post {
-  slug: string;
-  title: string;
-  date: string;
-  category: string;
-  description: string;
-}
+const CATEGORIES = ['Anbau', 'Wirkung & Cultivation', 'Equipment', 'Sorten & Strains'];
 
-const CATEGORIES = ["Alle", "Anbau", "Wirkung & Cultivation", "Equipment", "Sorten & Strains"];
+export default function BlogIndex() {
+  const posts = getAllPosts();
+  const known = CATEGORIES.map((c) => c.toLowerCase());
+  const other = posts.filter((p) => !known.includes(p.category.toLowerCase()));
 
-export default async function BlogIndex() {
-  const postsDirectory = path.join(process.cwd(), 'content/posts');
-  let posts: Post[] = [];
-
-  if (fs.existsSync(postsDirectory)) {
-    const filenames = fs.readdirSync(postsDirectory);
-    posts = filenames.map((filename) => {
-      const slug = filename.replace(/\.mdx?$/, '');
-      const filePath = path.join(postsDirectory, filename);
-      const fileContents = fs.readFileSync(filePath, 'utf8');
-      const { data } = matter(fileContents);
-
-      return {
-        slug,
-        title: data.title || slug,
-        date: data.date || '',
-        category: data.category || 'Allgemein',
-        description: data.description || '',
-      };
-    });
-  }
+  const sections = [
+    ...CATEGORIES.map((name) => ({
+      name,
+      posts: posts.filter((p) => p.category.toLowerCase() === name.toLowerCase()),
+    })),
+    ...(other.length ? [{ name: 'Weitere', posts: other }] : []),
+  ];
 
   return (
-    <main className="min-h-screen py-12 px-4 max-w-6xl mx-auto">
-      {/* Hero Header */}
-      <section className="mb-12">
-        <span className="text-xs font-bold uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-          Knowledge Base & Guides
-        </span>
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight mt-4 text-emerald-950 dark:text-white">
-          Cannabis <span className="text-emerald-500">Clustered.</span>
+    <main className="max-w-5xl mx-auto px-6 py-16 sm:py-24">
+      <header className="max-w-2xl">
+        <h1 className="text-4xl sm:text-6xl font-bold tracking-tighter text-neutral-900 dark:text-white">
+          Blog<span className="text-emerald-500">.</span>
         </h1>
-        <p className="mt-3 text-lg text-emerald-800/80 dark:text-neutral-400 max-w-2xl">
-          Echtes Wissen rund um Anbau, Terpene, Legalisierung & Equipment – übersichtlich gegliedert.
+        <p className="mt-4 text-lg leading-relaxed text-neutral-500 dark:text-neutral-400">
+          Guides, Wissen und Kultur – sortiert nach Themen.
         </p>
-      </section>
+      </header>
 
-      {/* Cluster Grid / Kategorien */}
-      <div className="space-y-16">
-        {CATEGORIES.filter(c => c !== "Alle").map((category) => {
-          const categoryPosts = posts.filter(p => p.category.toLowerCase() === category.toLowerCase());
-          if (categoryPosts.length === 0) return null;
+      {posts.length === 0 && (
+        <p className="mt-16 text-neutral-400">Noch keine Beiträge vorhanden.</p>
+      )}
 
+      <div className="mt-16 space-y-20">
+        {sections.map(({ name, posts: sectionPosts }) => {
+          if (sectionPosts.length === 0) return null;
           return (
-            <section key={category} className="space-y-6">
-              <div className="flex items-center gap-3 border-b border-emerald-500/20 pb-3">
-                <span className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
-                <h2 className="text-2xl font-bold uppercase tracking-wide text-emerald-900 dark:text-emerald-400">
-                  {category}
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {categoryPosts.map((post) => (
-                  <Link key={post.slug} href={`/blog/${post.slug}`} className="group block h-full">
-                    <article className="h-full p-6 rounded-2xl bg-white dark:bg-neutral-900/60 border border-emerald-900/10 dark:border-neutral-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300 flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-center text-xs font-mono text-emerald-600 dark:text-emerald-400 mb-3">
-                          <span className="bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            {post.category}
-                          </span>
-                          <span>{post.date}</span>
-                        </div>
-                        <h3 className="text-xl font-bold text-emerald-950 dark:text-white group-hover:text-emerald-500 transition-colors">
+            <section key={name}>
+              <h2 className="flex items-baseline gap-3 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
+                {name}
+                <span className="font-normal normal-case tracking-normal text-neutral-400 dark:text-neutral-600">
+                  {sectionPosts.length} {sectionPosts.length === 1 ? 'Beitrag' : 'Beiträge'}
+                </span>
+              </h2>
+              <ul className="mt-6 border-y border-neutral-200 dark:border-neutral-800 divide-y divide-neutral-200 dark:divide-neutral-800">
+                {sectionPosts.map((post) => (
+                  <li key={post.slug}>
+                    <Link href={`/blog/${post.slug}`} className="group flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-6 py-5">
+                      <time className="w-28 shrink-0 text-sm tabular-nums text-neutral-400 dark:text-neutral-500">
+                        {post.date}
+                      </time>
+                      <div className="min-w-0">
+                        <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                           {post.title}
                         </h3>
                         {post.description && (
-                          <p className="mt-3 text-sm text-emerald-800/70 dark:text-neutral-400 line-clamp-3 leading-relaxed">
+                          <p className="mt-1 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400 line-clamp-2">
                             {post.description}
                           </p>
                         )}
                       </div>
-                      <div className="mt-6 pt-4 border-t border-emerald-500/10 flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-transform">
-                        Artikel lesen →
-                      </div>
-                    </article>
-                  </Link>
+                      <span className="hidden sm:block ml-auto shrink-0 text-neutral-300 dark:text-neutral-600 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" aria-hidden>→</span>
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </section>
           );
         })}
