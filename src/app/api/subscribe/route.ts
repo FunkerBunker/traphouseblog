@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { subscribers } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { subscribeEmail } from "@/lib/blog-store";
 
 export const dynamic = "force-dynamic";
 
@@ -17,39 +15,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if already subscribed
-    const existing = await db
-      .select()
-      .from(subscribers)
-      .where(eq(subscribers.email, email))
-      .limit(1);
-
-    if (existing.length > 0) {
-      return NextResponse.json({
-        success: true,
-        message: "You are already on the VIP list! 🔥 Keep an eye out for fresh tips."
-      });
-    }
-
-    await db.insert(subscribers).values({
-      email,
-      createdAt: new Date(),
-    });
+    const isNew = await subscribeEmail(email);
 
     return NextResponse.json({
       success: true,
-      message: "Welcome to the TrapHouse VIP Club! 🍁 We've added you to our weekly tips feed."
+      message: isNew
+        ? "Welcome to the TrapHouse VIP Club! 🍁 We've added you to our weekly tips feed."
+        : "You are already on the VIP list! 🔥 Keep an eye out for fresh tips.",
     });
-  } catch (error: any) {
-    if (error.code === "23505") { // unique constraint violation
-      return NextResponse.json({
-        success: true,
-        message: "You are already on the VIP list! 🔥 Keep an eye out for fresh tips."
-      });
-    }
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to subscribe" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to subscribe";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

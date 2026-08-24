@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import {
   Leaf,
   Flame,
   Wind,
   Lightbulb,
   Sparkles,
-  MessageSquare,
   Heart,
   Eye,
   Search,
@@ -18,17 +18,13 @@ import {
   Mail,
   BookOpen,
   Calendar,
-  Tag,
   Share2,
   TrendingUp,
-  Award,
   BookMarked,
   Layers,
-  CheckCircle,
   HelpCircle,
-  User
 } from "lucide-react";
-import { Post, Comment } from "@/db/schema";
+import type { Post } from "@/lib/types";
 
 interface BlogAppProps {
   initialPosts: Post[];
@@ -46,16 +42,6 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  // Selected post for the reader modal
-  const [activePost, setActivePost] = useState<Post | null>(null);
-
-  // Comments for the active post
-  const [commentsList, setCommentsList] = useState<Comment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [newCommentAuthor, setNewCommentAuthor] = useState("");
-  const [newCommentContent, setNewCommentContent] = useState("");
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-
   // Newsletter subscription
   const [subscribeEmail, setSubscribeEmail] = useState("");
   const [isSubscribing, setIsSubscribing] = useState(false);
@@ -64,24 +50,8 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
     success: boolean;
   } | null>(null);
 
-  // Create Post Modal
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newPostForm, setNewPostForm] = useState({
-    title: "",
-    excerpt: "",
-    content: "",
-    category: "growing",
-    tags: "",
-    imageUrlPreset: "1", // Preset IDs
-    readTime: "5 min read",
-    isTop: false,
-    customImageUrl: "",
-  });
-  const [isCreatingPost, setIsCreatingPost] = useState(false);
-  const [createPostError, setCreatePostError] = useState<string | null>(null);
-
   // Copy to clipboard notification
-  const [copiedPostId, setCopiedPostId] = useState<number | null>(null);
+  const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
 
   // Load theme from localStorage and mount
   useEffect(() => {
@@ -136,11 +106,6 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
     return postsList.filter((post) => post.isTop);
   }, [postsList]);
 
-  // Extract Recent Blogs (excluding duplicates of top blogs if we want, or just list chronologically)
-  const recentBlogs = useMemo(() => {
-    return postsList.slice(0, 6);
-  }, [postsList]);
-
   // Category counts mapping
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {
@@ -157,94 +122,25 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
     return counts;
   }, [postsList]);
 
-  // Open article, trigger views increment, fetch comments
-  const handleOpenPost = async (post: Post) => {
-    setActivePost(post);
-    setCommentsList([]);
-    setCommentsLoading(true);
-
-    // Dynamic views increment (Optimistic update on UI side)
-    setPostsList((prev) =>
-      prev.map((p) => (p.id === post.id ? { ...p, views: p.views + 1 } : p))
-    );
-
-    // Call API to register view
-    try {
-      fetch(`/api/posts/${post.id}/view`, { method: "POST" });
-    } catch (e) {
-      console.error("Failed to register view", e);
-    }
-
-    // Fetch comments
-    try {
-      const res = await fetch(`/api/posts/${post.id}/comments`);
-      const data = await res.json();
-      if (data.success) {
-        setCommentsList(data.comments);
-      }
-    } catch (e) {
-      console.error("Failed to fetch comments", e);
-    } finally {
-      setCommentsLoading(false);
-    }
-  };
-
   // Like a post
-  const handleLikePost = async (e: React.MouseEvent, postId: number) => {
+  const handleLikePost = async (e: React.MouseEvent, slug: string, postId: string) => {
+    e.preventDefault();
     e.stopPropagation();
 
-    // Optimistic UI update
     setPostsList((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, likes: p.likes + 1 } : p))
     );
 
-    if (activePost && activePost.id === postId) {
-      setActivePost((prev) => (prev ? { ...prev, likes: prev.likes + 1 } : null));
-    }
-
     try {
-      const res = await fetch(`/api/posts/${postId}/like`, { method: "POST" });
+      const res = await fetch(`/api/posts/${slug}/like`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        // Synchronize actual likes from server
         setPostsList((prev) =>
           prev.map((p) => (p.id === postId ? { ...p, likes: data.likes } : p))
         );
-        if (activePost && activePost.id === postId) {
-          setActivePost((prev) => (prev ? { ...prev, likes: data.likes } : null));
-        }
       }
     } catch (err) {
       console.error("Error liking post:", err);
-    }
-  };
-
-  // Submit a comment
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activePost) return;
-    if (!newCommentAuthor.trim() || !newCommentContent.trim()) return;
-
-    setIsSubmittingComment(true);
-    try {
-      const res = await fetch(`/api/posts/${activePost.id}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          authorName: newCommentAuthor,
-          content: newCommentContent,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCommentsList((prev) => [data.comment, ...prev]);
-        setNewCommentContent("");
-        // Optimistic increase in comments count can be implied, we don't store comments count directly in posts table, but can track locally
-      }
-    } catch (err) {
-      console.error("Failed to submit comment", err);
-    } finally {
-      setIsSubmittingComment(false);
     }
   };
 
@@ -280,67 +176,11 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
     }
   };
 
-  // Submit new post
-  const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreatePostError(null);
-
-    const { title, excerpt, content, category, tags, imageUrlPreset, readTime, isTop, customImageUrl } = newPostForm;
-
-    if (!title.trim() || !excerpt.trim() || !content.trim()) {
-      setCreatePostError("Please fill out all required fields: Title, Excerpt, and Guide Content.");
-      return;
-    }
-
-    setIsCreatingPost(true);
-    const finalImageUrl = customImageUrl.trim() ? customImageUrl : imagePresets[imageUrlPreset] || imagePresets["1"];
-
-    try {
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          excerpt,
-          content,
-          category,
-          tags,
-          imageUrl: finalImageUrl,
-          readTime,
-          isTop,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setPostsList((prev) => [data.post, ...prev]);
-        setIsCreateModalOpen(false);
-        // Reset form
-        setNewPostForm({
-          title: "",
-          excerpt: "",
-          content: "",
-          category: "growing",
-          tags: "",
-          imageUrlPreset: "1",
-          readTime: "5 min read",
-          isTop: false,
-          customImageUrl: "",
-        });
-      } else {
-        setCreatePostError(data.error || "Failed to publish tip.");
-      }
-    } catch (err: any) {
-      setCreatePostError("Error publishing: " + (err.message || err));
-    } finally {
-      setIsCreatingPost(false);
-    }
-  };
-
   // Copy Post link to Clipboard
   const handleSharePost = (e: React.MouseEvent, post: Post) => {
+    e.preventDefault();
     e.stopPropagation();
-    const url = `${window.location.origin}/#${post.slug}`;
+    const url = `${window.location.origin}/blog/${post.slug}`;
     navigator.clipboard.writeText(url);
     setCopiedPostId(post.id);
     setTimeout(() => setCopiedPostId(null), 2500);
@@ -461,13 +301,13 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
           {/* Actions: Theme Toggle & Post Creator */}
           <div className="flex items-center gap-3">
             {/* Create Post Button */}
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
+            <Link
+              href="/new"
               className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-emerald-600 text-white hover:bg-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 border border-emerald-500/20 text-xs sm:text-sm font-semibold transition-all shadow-[0_4px_12px_rgba(16,185,129,0.15)] hover:scale-105 active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              <span>Share Tip</span>
-            </button>
+              <span>New Post</span>
+            </Link>
 
             {/* Theme Toggle Button */}
             <button
@@ -524,7 +364,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
               </div>
               <div>
                 <span className="block text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400 font-mono">
-                  4.9★
+                  4.9â˜…
                 </span>
                 <span className="text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold">Reader Rating</span>
               </div>
@@ -618,9 +458,9 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {topBlogs.slice(0, 3).map((blog) => (
-            <div
+            <Link
               key={blog.id}
-              onClick={() => handleOpenPost(blog)}
+              href={`/blog/${blog.slug}`}
               className="group cursor-pointer rounded-2xl overflow-hidden border border-emerald-500/10 bg-white dark:bg-zinc-900 hover:border-emerald-500/40 transition-all duration-300 flex flex-col h-full shadow-md hover:shadow-xl hover:-translate-y-1 relative"
             >
               {/* Category tag bubble */}
@@ -656,7 +496,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                         year: "numeric",
                       })}
                     </span>
-                    <span>•</span>
+                    <span>â€¢</span>
                     <span>{blog.readTime}</span>
                   </div>
 
@@ -673,7 +513,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                 <div className="pt-4 border-t border-emerald-500/5 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
                   <div className="flex items-center gap-3 font-semibold">
                     <button
-                      onClick={(e) => handleLikePost(e, blog.id)}
+                      onClick={(e) => handleLikePost(e, blog.slug, blog.id)}
                       className="flex items-center gap-1 py-1 px-2 rounded-full hover:bg-emerald-500/5 hover:text-emerald-500 dark:hover:text-emerald-400 transition-all active:scale-90"
                     >
                       <Heart className="w-4 h-4 text-emerald-500 fill-emerald-500/10 group-hover:scale-110" />
@@ -699,7 +539,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                   </button>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -722,10 +562,10 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
             <div className="flex flex-wrap gap-2">
               {[
                 { id: "all", label: "All Vibes" },
-                { id: "growing", label: "🪴 Growing" },
-                { id: "smoking", label: "💨 Smoking" },
-                { id: "extracts", label: "🍯 Extracts" },
-                { id: "culture", label: "🌿 Culture" },
+                { id: "growing", label: "ðŸª´ Growing" },
+                { id: "smoking", label: "ðŸ’¨ Smoking" },
+                { id: "extracts", label: "ðŸ¯ Extracts" },
+                { id: "culture", label: "ðŸŒ¿ Culture" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -776,9 +616,9 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPosts.map((blog) => (
-                <div
+                <Link
                   key={blog.id}
-                  onClick={() => handleOpenPost(blog)}
+                  href={`/blog/${blog.slug}`}
                   className="group cursor-pointer rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/60 hover:border-emerald-500/30 transition-all duration-300 flex flex-col h-full hover:shadow-lg relative"
                 >
                   {/* Category overlay */}
@@ -801,7 +641,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
                         <span>{new Date(blog.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span>{blog.readTime}</span>
                       </div>
 
@@ -829,7 +669,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                     <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/40 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
                       <div className="flex items-center gap-2.5 font-semibold">
                         <button
-                          onClick={(e) => handleLikePost(e, blog.id)}
+                          onClick={(e) => handleLikePost(e, blog.slug, blog.id)}
                           className="flex items-center gap-1 hover:text-emerald-500"
                         >
                           <Heart className="w-3.5 h-3.5 text-emerald-500" />
@@ -846,7 +686,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -887,7 +727,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                 <span className="font-mono font-bold text-amber-500">
                   {categoryCounts.growing} active secrets
                 </span>
-                <span className="font-semibold text-amber-500 group-hover:underline">Explore ➔</span>
+                <span className="font-semibold text-amber-500 group-hover:underline">Explore âž”</span>
               </div>
             </div>
 
@@ -908,7 +748,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                 <span className="font-mono font-bold text-orange-500">
                   {categoryCounts.smoking} active secrets
                 </span>
-                <span className="font-semibold text-orange-500 group-hover:underline">Explore ➔</span>
+                <span className="font-semibold text-orange-500 group-hover:underline">Explore âž”</span>
               </div>
             </div>
 
@@ -929,7 +769,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                 <span className="font-mono font-bold text-teal-400">
                   {categoryCounts.extracts} active secrets
                 </span>
-                <span className="font-semibold text-teal-400 group-hover:underline">Explore ➔</span>
+                <span className="font-semibold text-teal-400 group-hover:underline">Explore âž”</span>
               </div>
             </div>
 
@@ -950,7 +790,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                 <span className="font-mono font-bold text-emerald-500">
                   {categoryCounts.culture} active secrets
                 </span>
-                <span className="font-semibold text-emerald-500 group-hover:underline">Explore ➔</span>
+                <span className="font-semibold text-emerald-500 group-hover:underline">Explore âž”</span>
               </div>
             </div>
           </div>
@@ -990,7 +830,7 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                 disabled={isSubscribing}
                 className="px-6 py-3 rounded-full bg-emerald-500 text-black hover:bg-emerald-400 disabled:bg-zinc-700 disabled:text-zinc-400 font-bold text-sm transition-all shadow-[0_4px_12px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95"
               >
-                {isSubscribing ? "Joining..." : "Get Loud 🔥"}
+                {isSubscribing ? "Joining..." : "Get Loud ðŸ”¥"}
               </button>
             </form>
 
@@ -1030,22 +870,22 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
               <ul className="space-y-2 text-xs text-zinc-500 dark:text-zinc-400">
                 <li>
                   <button onClick={() => { setSelectedCategory("growing"); scrollToId("feed-section"); }} className="hover:text-emerald-500">
-                    🪴 Hydro & Living Soil Growing
+                    ðŸª´ Hydro & Living Soil Growing
                   </button>
                 </li>
                 <li>
                   <button onClick={() => { setSelectedCategory("smoking"); scrollToId("feed-section"); }} className="hover:text-emerald-500">
-                    💨 Joint Crafting & Rolling Art
+                    ðŸ’¨ Joint Crafting & Rolling Art
                   </button>
                 </li>
                 <li>
                   <button onClick={() => { setSelectedCategory("extracts"); scrollToId("feed-section"); }} className="hover:text-emerald-500">
-                    🍯 Live Rosin & Bubble Hash
+                    ðŸ¯ Live Rosin & Bubble Hash
                   </button>
                 </li>
                 <li>
                   <button onClick={() => { setSelectedCategory("culture"); scrollToId("feed-section"); }} className="hover:text-emerald-500">
-                    🌿 Terpenes & Cannabinoid Science
+                    ðŸŒ¿ Terpenes & Cannabinoid Science
                   </button>
                 </li>
               </ul>
@@ -1056,399 +896,19 @@ export default function BlogApp({ initialPosts }: BlogAppProps) {
                 OUR CODE OF ETHICS
               </h4>
               <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                • 100% Organic Pesticide-Free Advice <br />
-                • Safe & Clean Filtration Methods <br />
-                • Pure Terpene-focused Flavor <br />
-                • Zero Chemical Solvent extraction
+                â€¢ 100% Organic Pesticide-Free Advice <br />
+                â€¢ Safe & Clean Filtration Methods <br />
+                â€¢ Pure Terpene-focused Flavor <br />
+                â€¢ Zero Chemical Solvent extraction
               </p>
             </div>
           </div>
 
           <div className="mt-8 pt-8 border-t border-emerald-500/5 text-center text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-            <p>© {new Date().getFullYear()} TrapHouseBlog Inc. Created with pure love, smoke & light. Keep it organic.</p>
+            <p>Â© {new Date().getFullYear()} TrapHouseBlog Inc. Created with pure love, smoke & light. Keep it organic.</p>
           </div>
         </div>
       </footer>
-
-      {/* ARTICLE READER POPUP MODAL */}
-      {activePost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className={`relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-emerald-500/20 shadow-2xl flex flex-col ${
-            theme === "dark" ? "bg-zinc-900 text-zinc-100" : "bg-white text-zinc-900"
-          }`}>
-            {/* Header / Cover */}
-            <div className="relative h-60 sm:h-72 w-full bg-zinc-950 flex-shrink-0">
-              <img
-                src={activePost.imageUrl}
-                alt={activePost.title}
-                className="w-full h-full object-cover opacity-80"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = imagePresets["1"];
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
-
-              {/* Close Button */}
-              <button
-                onClick={() => setActivePost(null)}
-                className="absolute top-4 right-4 z-30 p-2 rounded-full bg-zinc-950/70 text-zinc-300 hover:text-white border border-zinc-800 backdrop-blur-md transition-colors"
-                title="Close Reader"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Title Overlay */}
-              <div className="absolute bottom-6 left-6 right-6 space-y-2">
-                <span className="text-[10px] font-bold tracking-widest font-mono uppercase px-3 py-1 rounded-full bg-emerald-500 text-black">
-                  {activePost.category}
-                </span>
-
-                <h2 className="text-xl sm:text-3xl font-black text-white leading-tight">
-                  {activePost.title}
-                </h2>
-              </div>
-            </div>
-
-            {/* Content Container */}
-            <div className="p-6 sm:p-8 space-y-6 flex-1 overflow-y-visible">
-              {/* Meta Stats row */}
-              <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-y border-emerald-500/10 text-xs text-zinc-500 dark:text-zinc-400">
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <Calendar className="w-4 h-4" />
-                    {new Date(activePost.createdAt).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </span>
-                  <span>•</span>
-                  <span>{activePost.readTime}</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={(e) => handleLikePost(e, activePost.id)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors font-bold"
-                  >
-                    <Heart className="w-4 h-4 text-emerald-500 fill-emerald-500/40" />
-                    <span>{activePost.likes} Loves</span>
-                  </button>
-
-                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800">
-                    <Eye className="w-4 h-4" />
-                    <span>{activePost.views} Views</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Excerpt panel */}
-              <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-300 italic border-l-4 border-emerald-500 pl-4 py-1 leading-relaxed">
-                {activePost.excerpt}
-              </p>
-
-              {/* Main formatted body */}
-              <div className="prose dark:prose-invert prose-emerald max-w-none text-sm sm:text-base leading-relaxed space-y-4 font-sans whitespace-pre-line text-zinc-700 dark:text-zinc-300">
-                {activePost.content}
-              </div>
-
-              {/* Tags block */}
-              <div className="flex flex-wrap gap-2 pt-4">
-                {activePost.tags.split(",").map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center gap-1"
-                  >
-                    <Tag className="w-3.5 h-3.5 text-emerald-500" />
-                    {tag.trim()}
-                  </span>
-                ))}
-              </div>
-
-              {/* DISCUSSION SECTION */}
-              <div className="border-t border-emerald-500/10 pt-8 space-y-6">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-emerald-500" />
-                  <h3 className="text-lg font-black font-mono tracking-wider">
-                    DISCUSSION ({commentsList.length})
-                  </h3>
-                </div>
-
-                {/* Comment Box Form */}
-                <form onSubmit={handleSubmitComment} className="space-y-3 bg-zinc-100 dark:bg-zinc-950 p-4 rounded-2xl border border-emerald-500/5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-500 font-mono">Add Your Voice</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-1 relative flex items-center">
-                      <User className="absolute left-3 w-4 h-4 text-zinc-400" />
-                      <input
-                        type="text"
-                        required
-                        placeholder="Your Nickname"
-                        value={newCommentAuthor}
-                        onChange={(e) => setNewCommentAuthor(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <input
-                        type="text"
-                        required
-                        placeholder="What's your experience or suggestion on this tip?"
-                        value={newCommentContent}
-                        onChange={(e) => setNewCommentContent(e.target.value)}
-                        className="w-full px-3 py-2 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end pt-1">
-                    <button
-                      type="submit"
-                      disabled={isSubmittingComment}
-                      className="px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-500 dark:text-black font-bold text-xs transition-colors flex items-center gap-1"
-                    >
-                      {isSubmittingComment ? "Posting..." : "Post Secret Advice 🔥"}
-                    </button>
-                  </div>
-                </form>
-
-                {/* Comments List */}
-                <div className="space-y-4">
-                  {commentsLoading ? (
-                    <div className="py-4 text-center text-xs font-mono text-zinc-500 animate-pulse">
-                      Retrieving grower discussions...
-                    </div>
-                  ) : commentsList.length === 0 ? (
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 italic text-center py-4">
-                      No comments yet. Be the first to start the grow room chat!
-                    </p>
-                  ) : (
-                    <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                      {commentsList.map((cmt) => (
-                        <div
-                          key={cmt.id}
-                          className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-100 dark:border-zinc-900 text-xs space-y-1.5 animate-slide-up"
-                        >
-                          <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
-                            <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              {cmt.authorName}
-                            </span>
-                            <span>
-                              {new Date(cmt.createdAt).toLocaleString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                          <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed font-mono">
-                            {cmt.content}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Close footer button */}
-              <div className="pt-6 border-t border-emerald-500/10 flex justify-end">
-                <button
-                  onClick={() => setActivePost(null)}
-                  className="px-5 py-2 rounded-full bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-colors"
-                >
-                  Close Manual
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CREATE POST MODAL ("Share Secret Tip") */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-emerald-500/20 shadow-2xl p-6 sm:p-8 ${
-            theme === "dark" ? "bg-zinc-900 text-zinc-100" : "bg-white text-zinc-900"
-          }`}>
-            <div className="flex items-center justify-between mb-4 border-b border-emerald-500/10 pb-4">
-              <div className="flex items-center gap-2 text-emerald-500">
-                <Leaf className="w-5 h-5" />
-                <h3 className="text-xl font-black font-mono tracking-wider">SHARE A GROWING / SMOKING SECRET</h3>
-              </div>
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {createPostError && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold">
-                ⚠️ {createPostError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreatePost} className="space-y-4 text-xs sm:text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Title */}
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="block font-bold text-zinc-400 uppercase tracking-wider font-mono">Guide Title *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g., 5 Tricks to Prevent Spidermites Naturally"
-                    value={newPostForm.title}
-                    onChange={(e) => setNewPostForm({ ...newPostForm, title: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100 font-bold"
-                  />
-                </div>
-
-                {/* Excerpt */}
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="block font-bold text-zinc-400 uppercase tracking-wider font-mono">Short Excerpt (Snippet) *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Brief 1-2 sentence hook to get readers clicked."
-                    value={newPostForm.excerpt}
-                    onChange={(e) => setNewPostForm({ ...newPostForm, excerpt: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100"
-                  />
-                </div>
-
-                {/* Category Selection */}
-                <div className="space-y-1">
-                  <label className="block font-bold text-zinc-400 uppercase tracking-wider font-mono">Category *</label>
-                  <select
-                    value={newPostForm.category}
-                    onChange={(e) => setNewPostForm({ ...newPostForm, category: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100 font-bold"
-                  >
-                    <option value="growing">🪴 Growing Secrets</option>
-                    <option value="smoking">💨 Smoking Arts</option>
-                    <option value="extracts">🍯 Extract Chemistry</option>
-                    <option value="culture">🌿 Culture & Science</option>
-                  </select>
-                </div>
-
-                {/* Read Time */}
-                <div className="space-y-1">
-                  <label className="block font-bold text-zinc-400 uppercase tracking-wider font-mono">Est Read Time</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., 5 min read"
-                    value={newPostForm.readTime}
-                    onChange={(e) => setNewPostForm({ ...newPostForm, readTime: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100"
-                  />
-                </div>
-
-                {/* Tags */}
-                <div className="space-y-1">
-                  <label className="block font-bold text-zinc-400 uppercase tracking-wider font-mono">Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Pest Control, Organic, Neem Oil"
-                    value={newPostForm.tags}
-                    onChange={(e) => setNewPostForm({ ...newPostForm, tags: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100"
-                  />
-                </div>
-
-                {/* Is Featured */}
-                <div className="flex items-center gap-3 pt-6">
-                  <input
-                    type="checkbox"
-                    id="isTopCheckbox"
-                    checked={newPostForm.isTop}
-                    onChange={(e) => setNewPostForm({ ...newPostForm, isTop: e.target.checked })}
-                    className="w-4 h-4 rounded text-emerald-500 bg-zinc-950 border-zinc-800 focus:ring-emerald-500"
-                  />
-                  <label htmlFor="isTopCheckbox" className="font-bold text-zinc-400 uppercase tracking-wider font-mono cursor-pointer select-none">
-                    Feature in "Top Blogs"
-                  </label>
-                </div>
-
-                {/* Image Cover Preset selector */}
-                <div className="sm:col-span-2 space-y-2">
-                  <label className="block font-bold text-zinc-400 uppercase tracking-wider font-mono">Choose Cover Image</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { id: "1", label: "Grow Canopy" },
-                      { id: "2", label: "Frosty Bud" },
-                      { id: "3", label: "Rolling Art" },
-                      { id: "4", label: "Golden Dabs" },
-                    ].map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setNewPostForm({ ...newPostForm, imageUrlPreset: p.id, customImageUrl: "" })}
-                        className={`p-1.5 rounded-xl border text-center transition-all ${
-                          newPostForm.imageUrlPreset === p.id && !newPostForm.customImageUrl
-                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-400 font-bold"
-                            : "border-zinc-200 dark:border-zinc-850 bg-zinc-50 dark:bg-zinc-950 text-zinc-500 hover:border-emerald-500/40"
-                        }`}
-                      >
-                        <img
-                          src={imagePresets[p.id]}
-                          className="w-full h-10 object-cover rounded-md mb-1"
-                          alt="preview"
-                        />
-                        <span className="text-[9px] block leading-tight">{p.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="pt-2">
-                    <span className="text-[10px] text-zinc-500 block mb-1 font-mono">Or paste custom image URL:</span>
-                    <input
-                      type="url"
-                      placeholder="https://images.unsplash.com/..."
-                      value={newPostForm.customImageUrl}
-                      onChange={(e) => setNewPostForm({ ...newPostForm, customImageUrl: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100 text-xs"
-                    />
-                  </div>
-                </div>
-
-                {/* Content Guide */}
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="block font-bold text-zinc-400 uppercase tracking-wider font-mono">The Guide Content (Markdown Supported) *</label>
-                  <textarea
-                    required
-                    rows={8}
-                    placeholder="Write your step-by-step growing secrets, recipe, or smoke-science tips here. Use paragraphs, bullet points, or numbering to make it readable!"
-                    value={newPostForm.content}
-                    onChange={(e) => setNewPostForm({ ...newPostForm, content: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-emerald-500 text-zinc-800 dark:text-zinc-100 font-mono text-xs leading-relaxed"
-                  />
-                </div>
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="pt-4 border-t border-emerald-500/10 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="px-5 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingPost}
-                  className="px-6 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-500 dark:text-black font-black text-xs transition-all shadow-[0_4px_12px_rgba(16,185,129,0.3)] hover:scale-105"
-                >
-                  {isCreatingPost ? "Publishing secret..." : "Publish to the world 🔥"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

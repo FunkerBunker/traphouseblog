@@ -1,13 +1,8 @@
-import { db } from "@/db";
-import { sql } from "drizzle-orm";
+import { healthCheck } from "@/lib/blog-store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    await db.execute(sql`select 1`);
-    return Response.json({ ok: true });
-  } catch {
-    return Response.json({ ok: false }, { status: 500 });
-  }
+  const ok = await healthCheck();
+  return Response.json({ ok });
 }
