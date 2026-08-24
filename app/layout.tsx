@@ -1,10 +1,10 @@
 // app/layout.tsx
-import { Analytics } from "@vercel/analytics/next"
 import React from 'react';
 import './globals.css';
 import Link from 'next/link';
 import ThemeToggle from './components/ThemeToggle';
 import type { Metadata } from 'next';
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: 'TRAPHOUSE | Cannabis Guides & Culture',
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
 
         {children}
-
+        <Analytics />
         <footer className="mt-24 border-t border-neutral-200 dark:border-neutral-800">
           <div className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between text-xs text-neutral-400 dark:text-neutral-500">
             <span>© {new Date().getFullYear()} Traphouse</span>
