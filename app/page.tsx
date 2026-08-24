@@ -14,7 +14,7 @@ export default function Home() {
           Wissen,<br />was wächst<span className="text-emerald-500">.</span>
         </h1>
         <p className="mt-6 max-w-md text-lg leading-relaxed text-neutral-500 dark:text-neutral-400">
-          Anbau-Guides, Strain-Profile und Equipment – klar aufbereitet..
+          Anbau-Guides, Strain-Profile und Equipment – klar aufbereitet.
         </p>
         <Link href="/blog" className="group mt-10 inline-flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
           <span className="border-b border-emerald-500 pb-0.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">

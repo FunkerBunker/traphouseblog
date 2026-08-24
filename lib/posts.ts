@@ -11,15 +11,19 @@ export interface Post {
 }
 
 export function getAllPosts(): Post[] {
-  const dir = path.join(process.cwd(), 'content/posts');
-  if (!fs.existsSync(dir)) return [];
+  const postsDirectory = path.join(process.cwd(), 'content', 'posts');
+
+  if (!fs.existsSync(postsDirectory)) return [];
 
   return fs
-    .readdirSync(dir)
-    .filter((f) => /\.mdx?$/.test(f))
+    .readdirSync(postsDirectory)
+    .filter((filename) => /\.mdx?$/.test(filename))
     .map((filename) => {
       const slug = filename.replace(/\.mdx?$/, '');
-      const { data } = matter(fs.readFileSync(path.join(dir, filename), 'utf8'));
+      const filePath = path.join(postsDirectory, filename);
+      const fileContents = fs.readFileSync(filePath, 'utf8');
+      const { data } = matter(fileContents);
+
       return {
         slug,
         title: data.title || slug,
@@ -28,5 +32,5 @@ export function getAllPosts(): Post[] {
         description: data.description || '',
       };
     })
-    .sort((a, b) => b.date.localeCompare(a.date)); // setzt ISO-Datum voraus: 2024-05-01
+    .sort((a, b) => b.date.localeCompare(a.date)); // ISO-Datum (z. B. "2024-05-01")
 }
