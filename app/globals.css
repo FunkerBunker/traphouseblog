@@ -1,7 +1,84 @@
-/* app/globals.css */
 @import "tailwindcss";
+
+/* Dark Mode über .dark-Klasse statt prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
 
 body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* --- Artikel-Typografie (ersetzt @tailwindcss/typography) --- */
+.article {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: #404040; /* neutral-700 */
+}
+.dark .article { color: #a3a3a3; } /* neutral-400 */
+
+.article > * + * { margin-top: 1.5em; }
+
+.article h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 2.5em;
+  color: #171717;
+}
+.article h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 2em;
+  color: #171717;
+}
+.dark .article h2,
+.dark .article h3 { color: #fff; }
+
+.article a {
+  color: #059669; /* emerald-600 */
+  text-decoration: none;
+  border-bottom: 1px solid rgba(5, 150, 105, 0.4);
+}
+.article a:hover { border-bottom-color: #059669; }
+.dark .article a { color: #34d399; border-bottom-color: rgba(52, 211, 153, 0.4); }
+
+.article strong { color: #171717; font-weight: 600; }
+.dark .article strong { color: #fff; }
+
+.article ul, .article ol { padding-left: 1.4em; }
+.article ul { list-style: disc; }
+.article ol { list-style: decimal; }
+.article li + li { margin-top: 0.5em; }
+.article li::marker { color: #10b981; }
+
+.article blockquote {
+  border-left: 2px solid #10b981;
+  padding-left: 1.25em;
+  font-style: italic;
+  color: #525252;
+}
+.dark .article blockquote { color: #a3a3a3; }
+
+.article code {
+  font-size: 0.875em;
+  padding: 0.15em 0.4em;
+  border-radius: 0.35rem;
+  background: #f5f5f5;
+  color: #059669;
+}
+.dark .article code { background: #171717; color: #34d399; }
+
+.article pre {
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
+}
+.dark .article pre { background: #0a0a0a; border-color: #262626; }
+.article pre code { background: none; padding: 0; color: inherit; }
+
+.article hr { border-color: #e5e5e5; margin: 3em 0; }
+.dark .article hr { border-color: #262626; }
+
+.article img { border-radius: 0.75rem; }

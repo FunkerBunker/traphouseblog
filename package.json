@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.18",
+    "@tailwindcss/postcss": "^4.3.3",
     "@vercel/node": "^4.0.0",
     "ai": "^7.0.31",
     "gray-matter": "^4.0.3",
