@@ -4,6 +4,8 @@ import { posts } from "@/db/schema";
 import { seedDatabase } from "@/db/seed";
 import { desc, eq } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     // Automatically seed if empty
