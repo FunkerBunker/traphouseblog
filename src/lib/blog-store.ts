@@ -13,59 +13,15 @@ function useBlob() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-async function readLocalData(): Promise<BlogData> {
-  try {
-    const raw = await fs.readFile(LOCAL_DATA_PATH, "utf-8");
-    return JSON.parse(raw) as BlogData;
-  } catch {
-    return emptyData();
-  }
+function isVercel() {
+  return Boolean(process.env.VERCEL);
 }
 
-async function writeLocalData(data: BlogData): Promise<void> {
-  await fs.mkdir(path.dirname(LOCAL_DATA_PATH), { recursive: true });
-  await fs.writeFile(LOCAL_DATA_PATH, JSON.stringify(data, null, 2), "utf-8");
-}
-
-async function readBlobData(): Promise<BlogData> {
-  try {
-    const result = await get(BLOG_PATH, { access: "private" });
-    if (!result?.stream) {
-      return emptyData();
-    }
-    const text = await new Response(result.stream).text();
-    return JSON.parse(text) as BlogData;
-  } catch {
-    const { blobs } = await list({ prefix: BLOG_PATH, limit: 1 });
-    if (blobs.length === 0) return emptyData();
-
-    const result = await get(blobs[0].url, { access: "private" });
-    if (!result?.stream) return emptyData();
-
-    const text = await new Response(result.stream).text();
-    return JSON.parse(text) as BlogData;
-  }
-}
-
-async function writeBlobData(data: BlogData): Promise<void> {
-  await put(BLOG_PATH, JSON.stringify(data), {
-    access: "private",
-    contentType: "application/json",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
-}
-
-async function readData(): Promise<BlogData> {
-  return useBlob() ? readBlobData() : readLocalData();
-}
-
-async function writeData(data: BlogData): Promise<void> {
-  if (useBlob()) {
-    await writeBlobData(data);
-  } else {
-    await writeLocalData(data);
-  }
+function seededData(): BlogData {
+  return {
+    posts: seedPosts.map((post) => toPost(post)),
+    subscribers: [],
+  };
 }
 
 function slugify(title: string): string {
@@ -87,12 +43,112 @@ function toPost(input: Omit<Post, "id" | "comments">, id?: string): Post {
   };
 }
 
-export async function ensureSeeded(): Promise<void> {
-  const data = await readData();
-  if (data.posts.length > 0) return;
+let memoryCache: BlogData | null = null;
 
-  data.posts = seedPosts.map((post) => toPost(post));
-  await writeData(data);
+async function readLocalData(): Promise<BlogData> {
+  try {
+    const raw = await fs.readFile(LOCAL_DATA_PATH, "utf-8");
+    return JSON.parse(raw) as BlogData;
+  } catch {
+    return emptyData();
+  }
+}
+
+async function writeLocalData(data: BlogData): Promise<void> {
+  await fs.mkdir(path.dirname(LOCAL_DATA_PATH), { recursive: true });
+  await fs.writeFile(LOCAL_DATA_PATH, JSON.stringify(data, null, 2), "utf-8");
+}
+
+async function readBlobData(): Promise<BlogData> {
+  try {
+    const result = await get(BLOG_PATH, { access: "private" });
+    if (result?.stream) {
+      const text = await new Response(result.stream).text();
+      return JSON.parse(text) as BlogData;
+    }
+  } catch {
+    // fall through to list lookup
+  }
+
+  const { blobs } = await list({ prefix: BLOG_PATH, limit: 1 });
+  if (blobs.length === 0) return emptyData();
+
+  const result = await get(blobs[0].url, { access: "private" });
+  if (!result?.stream) return emptyData();
+
+  const text = await new Response(result.stream).text();
+  return JSON.parse(text) as BlogData;
+}
+
+async function writeBlobData(data: BlogData): Promise<void> {
+  await put(BLOG_PATH, JSON.stringify(data), {
+    access: "private",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+}
+
+async function readData(): Promise<BlogData> {
+  if (memoryCache) return memoryCache;
+
+  if (useBlob()) {
+    try {
+      const data = await readBlobData();
+      memoryCache = data;
+      return data;
+    } catch (error) {
+      console.error("Failed to read blog data from Vercel Blob:", error);
+    }
+  }
+
+  if (!isVercel()) {
+    try {
+      const data = await readLocalData();
+      memoryCache = data;
+      return data;
+    } catch (error) {
+      console.error("Failed to read local blog data:", error);
+    }
+  }
+
+  memoryCache = seededData();
+  return memoryCache;
+}
+
+async function writeData(data: BlogData): Promise<void> {
+  memoryCache = data;
+
+  if (useBlob()) {
+    await writeBlobData(data);
+    return;
+  }
+
+  if (!isVercel()) {
+    await writeLocalData(data);
+    return;
+  }
+
+  console.warn(
+    "Blog data updated in memory only. Connect Vercel Blob (BLOB_READ_WRITE_TOKEN) to persist posts."
+  );
+}
+
+export async function ensureSeeded(): Promise<void> {
+  try {
+    const data = await readData();
+    if (data.posts.length > 0) return;
+
+    const seeded = seededData();
+    memoryCache = seeded;
+
+    if (useBlob() || !isVercel()) {
+      await writeData(seeded);
+    }
+  } catch (error) {
+    console.error("Failed to seed blog data:", error);
+    memoryCache = seededData();
+  }
 }
 
 export async function getAllPosts(category?: string | null): Promise<Post[]> {
@@ -116,6 +172,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
 }
 
 export async function createPost(input: PostInput): Promise<Post> {
+  await ensureSeeded();
   const data = await readData();
   const slug = input.slug?.trim() || slugify(input.title);
 
