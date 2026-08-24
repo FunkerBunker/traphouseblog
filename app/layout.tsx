@@ -36,8 +36,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Traphouse<span className="text-emerald-500">.</span>
             </Link>
             <nav className="flex items-center gap-5">
-              <Link href="/blog" className="text-sm text-neutral-500 hover:text-emerald-600 dark:text-neutral-400 dark:hover:text-emerald-400 transition-colors">
+              <Link
+                href="/blog"
+                className="text-sm text-neutral-500 hover:text-emerald-600 dark:text-neutral-400 dark:hover:text-emerald-400 transition-colors"
+              >
                 Blog
+              </Link>
+              <Link
+                href="/calculator"
+                className="text-sm text-neutral-500 hover:text-emerald-600 dark:text-neutral-400 dark:hover:text-emerald-400 transition-colors"
+              >
+                Grow-Rechner
               </Link>
               <ThemeToggle />
             </nav>
