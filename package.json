@@ -7,9 +7,11 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.18",
-    "@vercel/node": "^5.8.26",
+    "@vercel/node": "^4.0.0",
     "ai": "^7.0.31",
+    "gray-matter": "^4.0.3",
     "next": "^16.3.2",
+    "next-mdx-remote": "^6.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zod": "^4.4.3"
