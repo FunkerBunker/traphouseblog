@@ -21,4 +21,5 @@ if (process.env.NODE_ENV !== "production") {
   globalForDb.__arenaNextJsPostgresqlPool = pool;
 }
 
-export const db = drizzle(pool);
+// ⬇️ HIER DIE ÄNDERUNG (pool als { client: pool } übergeben)
+export const db = drizzle({ client: pool });
