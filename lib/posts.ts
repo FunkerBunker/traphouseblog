@@ -8,6 +8,9 @@ export interface Post {
   date: string;
   category: string;
   description: string;
+  author?: string;
+  image?: string;
+  coverImage?: string;
 }
 
 export function getAllPosts(): Post[] {
@@ -30,7 +33,33 @@ export function getAllPosts(): Post[] {
         date: data.date || '',
         category: data.category || 'Allgemein',
         description: data.description || '',
+        author: data.author || 'Traphouse Redaktion',
+        image: data.image || undefined,
+        // Liest coverImage aus dem Frontmatter oder nutzt image als Fallback
+        coverImage: data.coverImage || data.image || undefined,
       };
     })
-    .sort((a, b) => b.date.localeCompare(a.date)); // ISO-Datum (z. B. "2024-05-01")
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Erweitere lib/posts.ts um diese Funktion (falls noch nicht vorhanden)
+export function getPostBySlug(slug: string) {
+  const postsDirectory = path.join(process.cwd(), 'content', 'posts');
+  const filePath = path.join(postsDirectory, `${slug}.mdx`);
+
+  if (!fs.existsSync(filePath)) return null;
+
+  const fileContents = fs.readFileSync(filePath, 'utf8');
+  const { data, content } = matter(fileContents);
+
+  return {
+    slug,
+    title: data.title || slug,
+    date: data.date || '',
+    category: data.category || 'Allgemein',
+    description: data.description || '',
+    author: data.author || 'Traphouse Redaktion',
+    coverImage: data.coverImage || data.image || undefined,
+    content,
+  };
 }
