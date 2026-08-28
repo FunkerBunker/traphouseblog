@@ -51,6 +51,7 @@ export default async function BlogPost({ params }: Props) {
   const postUrl = `${siteUrl}/blog/${slug}`;
   const faqs: FAQItem[] = data.faqs || [];
   const coverImage = data.coverImage || data.image;
+  const youtubeUrl: string | undefined = data.youtubeUrl;
 
   // 1. Haupt-Schema: BlogPosting
   const blogPostingSchema = {
@@ -63,6 +64,7 @@ export default async function BlogPost({ params }: Props) {
     mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
     author: { '@type': 'Person', name: 'Traphouse Redaktion' },
     publisher: { '@type': 'Organization', name: 'Traphouse', url: siteUrl },
+    ...(youtubeUrl ? { sameAs: [youtubeUrl] } : {}),
   };
 
   // 2. FAQ-Schema (nur wenn FAQs existieren)
@@ -98,7 +100,7 @@ export default async function BlogPost({ params }: Props) {
         </Link>
 
         <header className="mt-10 pb-8">
-          <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.2em]">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-medium uppercase tracking-[0.2em]">
             {data.category && (
               <span className="text-emerald-600 dark:text-emerald-400">
                 {data.category}
@@ -106,9 +108,11 @@ export default async function BlogPost({ params }: Props) {
             )}
             {data.date && <time className="text-neutral-400">{data.date}</time>}
           </div>
+
           <h1 className="mt-4 text-4xl sm:text-5xl font-bold text-neutral-900 dark:text-white">
             {data.title}
           </h1>
+
           {data.description && (
             <p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed">
               {data.description}
@@ -150,6 +154,23 @@ export default async function BlogPost({ params }: Props) {
               ))}
             </div>
           </section>
+        )}
+
+        {/* YouTube Quellenverlinkung ganz unten */}
+        {youtubeUrl && (
+          <div className="mt-12 pt-6 border-t border-neutral-200 dark:border-neutral-800 flex justify-center">
+            <a
+              href={youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-xs font-medium text-neutral-700 dark:text-neutral-300 transition-colors border border-neutral-200 dark:border-neutral-800"
+            >
+              <svg className="w-4 h-4 fill-red-600" viewBox="0 0 24 24">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              <span>Mehr zu dem Thema in diesem Video ↗</span>
+            </a>
+          </div>
         )}
       </article>
     </main>

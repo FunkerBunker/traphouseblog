@@ -11,6 +11,7 @@ export interface Post {
   author?: string;
   image?: string;
   coverImage?: string;
+  youtubeUrl?: string; // Neu hinzugefügt
 }
 
 export function getAllPosts(): Post[] {
@@ -35,14 +36,13 @@ export function getAllPosts(): Post[] {
         description: data.description || '',
         author: data.author || 'Traphouse Redaktion',
         image: data.image || undefined,
-        // Liest coverImage aus dem Frontmatter oder nutzt image als Fallback
         coverImage: data.coverImage || data.image || undefined,
+        youtubeUrl: data.youtubeUrl || undefined, // Neu hinzugefügt
       };
     })
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-// Erweitere lib/posts.ts um diese Funktion (falls noch nicht vorhanden)
 export function getPostBySlug(slug: string) {
   const postsDirectory = path.join(process.cwd(), 'content', 'posts');
   const filePath = path.join(postsDirectory, `${slug}.mdx`);
@@ -60,6 +60,7 @@ export function getPostBySlug(slug: string) {
     description: data.description || '',
     author: data.author || 'Traphouse Redaktion',
     coverImage: data.coverImage || data.image || undefined,
+    youtubeUrl: data.youtubeUrl || undefined, // Neu hinzugefügt
     content,
   };
 }
