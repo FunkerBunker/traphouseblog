@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { getAllPosts } from '../../lib/posts';
+import { getAllPosts, getReadingTime } from '../../lib/posts';
 
 export default function BlogIndex() {
   const posts = getAllPosts();
@@ -56,44 +55,50 @@ export default function BlogIndex() {
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {sectionPosts.map((post) => (
-                  <article key={post.slug} className="group flex flex-col h-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all duration-300">
-                    <Link href={`/blog/${post.slug}`} className="flex flex-col h-full">
-                      <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800">
-                        {post.coverImage ? (
-                          <img
-                            src={post.coverImage}
-                            alt={post.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm">
-                            Kein Bild vorhanden
-                          </div>
-                        )}
-                      </div>
+                {sectionPosts.map((post) => {
+                  const readingTime = post.readingTime || getReadingTime(post.content);
 
-                      <div className="flex flex-col flex-1 p-6">
-                        <time className="text-xs font-medium tabular-nums text-neutral-400 dark:text-neutral-500 mb-2">
-                          {post.date}
-                        </time>
-                        <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
-                          {post.title}
-                        </h3>
-                        {post.description && (
-                          <p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400 line-clamp-3 flex-1">
-                            {post.description}
-                          </p>
-                        )}
-                        <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 pt-4 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                          Beitrag lesen
-                          <span className="group-hover:translate-x-1 transition-transform" aria-hidden>→</span>
+                  return (
+                    <article key={post.slug} className="group flex flex-col h-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all duration-300">
+                      <Link href={`/blog/${post.slug}`} className="flex flex-col h-full">
+                        <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800">
+                          {post.coverImage ? (
+                            <img
+                              src={post.coverImage}
+                              alt={post.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm">
+                              Kein Bild vorhanden
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </Link>
-                  </article>
-                ))}
+
+                        <div className="flex flex-col flex-1 p-6">
+                          <div className="flex items-center gap-2 text-xs font-medium tabular-nums text-neutral-400 dark:text-neutral-500 mb-2">
+                            {post.date && <time>{post.date}</time>}
+                            {post.date && <span>•</span>}
+                            <span className="lowercase">{readingTime}</span>
+                          </div>
+                          <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                            {post.title}
+                          </h3>
+                          {post.description && (
+                            <p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400 line-clamp-3 flex-1">
+                              {post.description}
+                            </p>
+                          )}
+                          <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 pt-4 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                            Beitrag lesen
+                            <span className="group-hover:translate-x-1 transition-transform" aria-hidden>→</span>
+                          </div>
+                        </div>
+                      </Link>
+                    </article>
+                  );
+                })}
               </div>
             </section>
           );

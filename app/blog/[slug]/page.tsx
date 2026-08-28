@@ -5,6 +5,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import {getReadingTime } from '../../../lib/posts';
 
 interface FAQItem {
   question: string;
@@ -47,6 +48,7 @@ export default async function BlogPost({ params }: Props) {
 
   const { data, content } = matter(fs.readFileSync(filePath, 'utf8'));
 
+  const readingTime = getReadingTime(content);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://traphouseblog.de';
   const postUrl = `${siteUrl}/blog/${slug}`;
   const faqs: FAQItem[] = data.faqs || [];
@@ -106,7 +108,10 @@ export default async function BlogPost({ params }: Props) {
                 {data.category}
               </span>
             )}
+            {data.category && <span className="text-neutral-400">•</span>}
             {data.date && <time className="text-neutral-400">{data.date}</time>}
+            {data.date && <span className="text-neutral-400">•</span>}
+            <span className="text-neutral-400">{readingTime}</span>
           </div>
 
           <h1 className="mt-4 text-4xl sm:text-5xl font-bold text-neutral-900 dark:text-white">

@@ -5,48 +5,64 @@ import matter from 'gray-matter';
 export interface Post {
   slug: string;
   title: string;
+  description: string;
   date: string;
   category: string;
-  description: string;
-  author?: string;
-  image?: string;
-  coverImage?: string;
-  youtubeUrl?: string; // Neu hinzugefügt
+  coverImage: string;
+  youtubeUrl?: string;
+  faqs?: Array<{ question: string; answer: string }>;
+  content: string;
+  readingTime: string;
 }
 
-export function getAllPosts(): Post[] {
-  const postsDirectory = path.join(process.cwd(), 'content', 'posts');
+const postsDirectory = path.join(process.cwd(), 'content', 'posts');
 
+// Hilfsfunktion zur Berechnung der Lesezeit (ca. 200 Wörter pro Minute)
+export function getReadingTime(content: string): string {
+  const cleanContent = content
+    .replace(/---[\s\S]*?---/, '') // Frontmatter entfernen
+    .replace(/<[^>]*>/g, '')        // HTML/JSX-Tags entfernen
+    .replace(/\[\[.*?\]\]/g, '');    // Bild-Marker entfernen
+
+  const words = cleanContent.trim().split(/\s+/).length;
+  const minutes = Math.ceil(words / 200);
+
+  return `Lesezeit: ${minutes} min.`;
+}
+
+// Alle Artikel für die Übersichtsseite abrufen
+export function getAllPosts(): Post[] {
   if (!fs.existsSync(postsDirectory)) return [];
 
-  return fs
-    .readdirSync(postsDirectory)
-    .filter((filename) => /\.mdx?$/.test(filename))
-    .map((filename) => {
-      const slug = filename.replace(/\.mdx?$/, '');
-      const filePath = path.join(postsDirectory, filename);
-      const fileContents = fs.readFileSync(filePath, 'utf8');
-      const { data } = matter(fileContents);
+  const fileNames = fs.readdirSync(postsDirectory).filter((f) => /\.mdx?$/.test(f));
 
-      return {
-        slug,
-        title: data.title || slug,
-        date: data.date || '',
-        category: data.category || 'Allgemein',
-        description: data.description || '',
-        author: data.author || 'Traphouse Redaktion',
-        image: data.image || undefined,
-        coverImage: data.coverImage || data.image || undefined,
-        youtubeUrl: data.youtubeUrl || undefined, // Neu hinzugefügt
-      };
-    })
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const posts = fileNames.map((fileName) => {
+    const slug = fileName.replace(/\.mdx?$/, '');
+    const fullPath = path.join(postsDirectory, fileName);
+    const fileContents = fs.readFileSync(fullPath, 'utf8');
+    const { data, content } = matter(fileContents);
+
+    return {
+      slug,
+      title: data.title || slug,
+      description: data.description || '',
+      date: data.date || '',
+      category: data.category || '',
+      coverImage: data.coverImage || data.image || '',
+      youtubeUrl: data.youtubeUrl,
+      faqs: data.faqs || [],
+      content,
+      readingTime: getReadingTime(content),
+    };
+  });
+
+  // Nach Datum sortieren (neueste zuerst)
+  return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
-export function getPostBySlug(slug: string) {
-  const postsDirectory = path.join(process.cwd(), 'content', 'posts');
+// Einzelnen Artikel für die Detailseite abrufen
+export function getPostBySlug(slug: string): Post | null {
   const filePath = path.join(postsDirectory, `${slug}.mdx`);
-
   if (!fs.existsSync(filePath)) return null;
 
   const fileContents = fs.readFileSync(filePath, 'utf8');
@@ -55,12 +71,13 @@ export function getPostBySlug(slug: string) {
   return {
     slug,
     title: data.title || slug,
-    date: data.date || '',
-    category: data.category || 'Allgemein',
     description: data.description || '',
-    author: data.author || 'Traphouse Redaktion',
-    coverImage: data.coverImage || data.image || undefined,
-    youtubeUrl: data.youtubeUrl || undefined, // Neu hinzugefügt
+    date: data.date || '',
+    category: data.category || '',
+    coverImage: data.coverImage || data.image || '',
+    youtubeUrl: data.youtubeUrl,
+    faqs: data.faqs || [],
     content,
+    readingTime: getReadingTime(content),
   };
 }
